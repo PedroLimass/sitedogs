@@ -1,5 +1,4 @@
-import { getSuggestedQuery } from '@testing-library/react';
-import React, { Children } from 'react';
+import React from 'react';
 import { TOKEN_POST, TOKEN_VALIDATE_POST, USER_GET } from './api';
 
 export const UserContext = React.createContext();
@@ -40,11 +39,21 @@ export const UserStorage = ({ children }) => {
   }
 
   async function userLogin(username, password) {
-    const { url, options } = TOKEN_POST({ username, password });
-    const tokenRes = await fetch(url, options);
-    const { token } = await tokenRes.json();
-    window.localStorage.setItem('token', token);
-    getUser(token);
+    try {
+      setError(null);
+      setLoading(true);
+      const { url, options } = TOKEN_POST({ username, password });
+      const tokenRes = await fetch(url, options);
+      if (!tokenRes.ok) throw new Error(`Error: Usuario Invalido!`);
+      const { token } = await tokenRes.json();
+      window.localStorage.setItem('token', token);
+      await getUser(token);
+    } catch (err) {
+      setError(err.message);
+      setLogin(false);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function userLogout() {
@@ -56,7 +65,9 @@ export const UserStorage = ({ children }) => {
   }
 
   return (
-    <UserContext.Provider value={{ userLogin, userLogout, data }}>
+    <UserContext.Provider
+      value={{ userLogin, userLogout, data, error, loading, login }}
+    >
       {children}
     </UserContext.Provider>
   );
